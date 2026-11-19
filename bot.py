@@ -1,4 +1,7 @@
 import os, json, asyncio, threading
+try:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+except: pass
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -294,6 +297,14 @@ def main():
     if not TOKEN:
         print("BOT_TOKEN ntayibonewe"); return
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+    async def post_init(app):
+    asyncio.create_task(auto_sender(app))
+
+async def run_bot():
+    keep_alive(); load_auto()
+    if not TOKEN:
+        print("BOT_TOKEN ntayibonewe"); return
+    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status_cmd))
@@ -310,9 +321,13 @@ def main():
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, bot_added))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_support))
     print("Bot iriruka...")
-    app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    await asyncio.Event().wait()
+
+def main():
+    asyncio.run(run_bot())
 
 if __name__ == "__main__":
     main()
-
-    
