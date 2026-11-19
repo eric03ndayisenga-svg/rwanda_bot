@@ -1,11 +1,22 @@
 import os, json, asyncio
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = 8880467928
+OWNER_ID = 8886067024  # ID yawe - ntuyihindure niba ari yo
 DB_FILE = "groups.json"
 WAITING = set()
+
+# --- Kugirango ikore kuri Render FREE ---
+def keep_alive():
+    port = int(os.getenv("PORT", 10000))
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200); self.end_headers(); self.wfile.write(b"Bot is alive")
+        def log_message(self, *a): pass
+    threading.Thread(target=lambda: HTTPServer(("0.0.0.0", port), H).serve_forever(), daemon=True).start()
 
 def load_groups():
     try:
@@ -20,34 +31,34 @@ def save_groups(g):
 
 def menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Add me to a Group", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
-        [InlineKeyboardButton("Rules", callback_data="rules"), InlineKeyboardButton("Info", callback_data="info")],
-        [InlineKeyboardButton("Nyandikira / Support", callback_data="support")],
+        [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwandaonlinebusiness_bot?startgroup=true")],
+        [InlineKeyboardButton("📜 Rules", callback_data="rules"), InlineKeyboardButton("ℹ️ Info", callback_data="info")],
+        [InlineKeyboardButton("✍️ Nyandikira / Support", callback_data="support")]
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "Murakaza neza kuri Rwandaonline business\n\nNdi bot wo gucunga group.\nOngeramo muri group yawe, unyite Admin."
-    await update.message.reply_text(msg, reply_markup=menu())
+    await update.message.reply_text("Murakaza neza kuri Rwanda online business bot wo gucunga amatsinda n'abakiriya bawe. Hitamo:", reply_markup=menu())
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("/start - Menu\n/rules - Amategeko\n/support - Nyandikira\n/broadcast message - Kohereza muri group zose")
+    await update.message.reply_text("/start - Gutangira\n/rules - Amategeko\n/support - Kuvugana na Admin\n/help - Ubufasha", reply_markup=menu())
 
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana")
+    await update.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana")
 
 async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
     WAITING.add(update.effective_user.id)
-    await update.message.reply_text("Andika ikibazo cyawe hano, nzabwira Admin ako kanya.")
+    await update.message.reply_text("✍️ Andika ikibazo cyawe hano, nzabisubiza vuba.")
 
 async def forward_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    if uid not in WAITING:
+    if update.effective_chat.type != "private":
+        return
+    if update.effective_user.id not in WAITING:
         return
     user = update.effective_user
-    text = "MESSAGE NSHYA\nUmuntu: " + str(user.first_name) + "\nUsername: @" + str(user.username) + "\nID: " + str(uid) + "\nMessage: " + str(update.message.text)
-    await context.bot.send_message(chat_id=OWNER_ID, text=text)
-    await update.message.reply_text("Message yawe yoherejwe. Admin azagusubiza vuba.")
-    WAITING.remove(uid)
+    text = update.message.text
+    await context.bot.send_message(OWNER_ID, f"📩 MESSAGE NSHYA\n\nUmutumwa: {user.first_name} (@{user.username})\nID: {user.id}\n\n{text}\n\nKugirango umusubize, andika: /reply {user.id} ubutumwa")
+    await update.message.reply_text("Message yawe yoherejwe. Admin azagu...")
+    WAITING.remove(update.effective_user.id)
 
 async def reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
@@ -58,21 +69,21 @@ async def reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_id = int(context.args[0])
     msg = " ".join(context.args[1:])
     try:
-        await context.bot.send_message(chat_id=target_id, text="Admin: " + msg)
-        await update.message.reply_text("Wasubije.")
+        await context.bot.send_message(chat_id=target_id, text=f"💬 Admin: {msg}")
+        await update.message.reply_text("Wasubije ✅")
     except:
-        await update.message.reply_text("Ntabwo nabashije kumwoherereza.")
+        await update.message.reply_text("Ntibashije kumwoherereza.")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     if q.data == "rules":
-        await q.message.reply_text("1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana")
+        await q.edit_message_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana", reply_markup=menu())
     elif q.data == "info":
-        await q.message.reply_text("Rwandaonline business - Bot isanzwe ya group.")
+        await q.edit_message_text("Rwanda online business - Bot izanwe na Rwanda online business kugirango ifashe gucunga amatsinda.", reply_markup=menu())
     elif q.data == "support":
         WAITING.add(q.from_user.id)
-        await q.message.reply_text("Andika ikibazo cyawe hano, nzabwira Admin.")
+        await q.edit_message_text("✍️ Andika ikibazo cyawe hano, nzabisubiza vuba.", reply_markup=menu())
 
 async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -82,9 +93,9 @@ async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_groups(groups)
     for m in update.message.new_chat_members:
         if m.id == context.bot.id:
-            await update.message.reply_text("Murakaza neza! Ndi Rwandaonline bot. Nyite Admin nkore neza.", reply_markup=menu())
+            await update.message.reply_text("Murakaza neza! Ndi Rwanda online business bot. Soma /rules")
         else:
-            await update.message.reply_text("Murakaza neza " + str(m.first_name) + "! Soma /rules.")
+            await update.message.reply_text(f"Murakaza neza {m.first_name}! 🇷🇼")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
@@ -94,25 +105,22 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Andika: /broadcast Murakaza neza")
         return
     text = " ".join(context.args)
-    groups = load_groups()
     sent = 0
-    for gid in groups:
+    for gid in load_groups():
         try:
             await context.bot.send_message(chat_id=gid, text=text)
             sent += 1
         except:
             pass
-    await update.message.reply_text("Yoherejwe muri group " + str(sent) + " / " + str(len(groups)))
-
-import asyncio
+    await update.message.reply_text(f"Yohererejwe muri group {sent} ✅")
 
 async def main():
+    keep_alive()
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("rules", rules))
     app.add_handler(CommandHandler("support", support))
-    app.add_handler(CommandHandler("contact", support))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CommandHandler("reply", reply))
     app.add_handler(CallbackQueryHandler(button))
