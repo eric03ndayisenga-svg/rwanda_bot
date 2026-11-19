@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = 8886067024
+OWNER_ID = 8880467928
 DB_FILE = "groups.json"
 AUTO_FILE = "auto.json"
 WAITING = set()
