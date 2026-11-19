@@ -289,15 +289,7 @@ async def auto_sender(app):
             await asyncio.sleep(float(AUTO_MSG.get("minutes", 15)) * 60)
         else:
             await asyncio.sleep(30)
-async def post_init(app):
-    asyncio.create_task(auto_sender(app))
-
-def main():
-    keep_alive(); load_auto()
-    if not TOKEN:
-        print("BOT_TOKEN ntayibonewe"); return
-    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
-    async def post_init(app):
+            async def post_init(app):
     asyncio.create_task(auto_sender(app))
 
 async def run_bot():
@@ -331,3 +323,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
