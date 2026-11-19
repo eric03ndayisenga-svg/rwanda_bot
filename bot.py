@@ -1,5 +1,5 @@
 import os, json, asyncio, threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
@@ -9,14 +9,24 @@ DB_FILE = "groups.json"
 AUTO_FILE = "auto.json"
 WAITING = set()
 AUTO_MSG = {"text": "", "minutes": 15, "on": False}
+WA_NUMBER = "250727172400"
+WA_LINK = f"https://wa.me/{WA_NUMBER}"
+
+# ========== FLASK - KEEP ALIVE ==========
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def home():
+    return "Bot is alive ✅ - RWANDA BUSINESS", 200
+
+@app_flask.route('/health')
+def health():
+    return "OK", 200
 
 def keep_alive():
     port = int(os.getenv("PORT", 10000))
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200); self.end_headers(); self.wfile.write(b"Bot is alive")
-        def log_message(self, *a): pass
-    threading.Thread(target=lambda: HTTPServer(("0.0.0.0", port), H).serve_forever(), daemon=True).start()
+    threading.Thread(target=lambda: app_flask.run(host="0.0.0.0", port=port, debug=False, use_reloader=False), daemon=True).start()
+# =======================================
 
 def load_groups():
     try:
@@ -37,6 +47,7 @@ def menu():
         [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
         [InlineKeyboardButton("📜 Rules", callback_data="rules"),
          InlineKeyboardButton("ℹ️ Info", callback_data="info")],
+        [InlineKeyboardButton("📱 Twandikire WhatsApp", url=WA_LINK)],
         [InlineKeyboardButton("✍️ Nyandikira / Support", callback_data="support")],
     ])
 
@@ -58,6 +69,7 @@ def owner_panel():
          InlineKeyboardButton("⚙️ SETTINGS", callback_data="set")],
         [InlineKeyboardButton("📜 RULES", callback_data="rules"),
          InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+        [InlineKeyboardButton("📱 WHATSAPP 0727172400", url=WA_LINK)],
         [InlineKeyboardButton("🆘 HELP", callback_data="help")],
         [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
         [InlineKeyboardButton("✍️ NYANDIKIRA", url="https://t.me/Onlinebu12")],
@@ -78,6 +90,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("💎 PREMIUM", callback_data="premium")],
                 [InlineKeyboardButton("📜 RULES", callback_data="rules"),
                  InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+                [InlineKeyboardButton("📱 Twandikire WhatsApp", url=WA_LINK)],
                 [InlineKeyboardButton("✍️ NYANDIKIRA ADMIN", url="https://t.me/Onlinebu12")],
             ])
         )
@@ -94,6 +107,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💎 PREMIUM", callback_data="premium")],
             [InlineKeyboardButton("📜 RULES", callback_data="rules"),
              InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+            [InlineKeyboardButton("📱 Twandikire WhatsApp - 0727172400", url=WA_LINK)],
             [InlineKeyboardButton("✍️ NYANDIKIRA ADMIN", url="https://t.me/Onlinebu12")],
         ])
     )
@@ -114,7 +128,13 @@ async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
     WAITING.add(update.effective_user.id)
 
 async def forward_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type != "private": return
+    chat = update.effective_chat
+    if chat and chat.type in ["group", "supergroup"]:
+        groups = load_groups()
+        if chat.id not in groups:
+            groups.append(chat.id); save_groups(groups)
+        return
+    if chat.type != "private": return
     user = update.effective_user
     if user.id in WAITING:
         WAITING.remove(user.id)
@@ -139,10 +159,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta scam - uzabuzwa burundu.")
         return
     if data == "info":
-        await q.message.reply_text("🇷🇼 RWANDA BUSINESS\n\nBot izafasha kugurisha, kugura no kumenya promotion!\n\nNyandikira: @Onlinebu12")
+        await q.message.reply_text(f"🇷🇼 RWANDA BUSINESS\n\nBot izafasha kugurisha, kugura no kumenya promotion!\n\n📱 WhatsApp: 0727172400\nNyandikira: @Onlinebu12")
         return
     if data == "premium":
-        await q.message.reply_text("💎 PREMIUM\n\nUshaka Premium? Nyandikira:\n👉 @Onlinebu12")
+        await q.message.reply_text("💎 PREMIUM\n\nUshaka Premium? Nyandikira:\n👉 @Onlinebu12\n📱 WhatsApp: 0727172400")
         return
     if data == "support":
         WAITING.add(user.id)
@@ -163,7 +183,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             c = 0
             for gid in load_groups():
                 try: await context.bot.send_message(chat_id=gid, text=f"📢 {AUTO_MSG['text']}"); c+=1
-                except: pass
+                except Exception as e: print(f"Send fail {gid}: {e}")
             await q.message.reply_text(f"✅ OHEREJE UBU muri group {c} ✅")
     elif data == "setauto_help":
         await q.message.reply_text("⏰ AUTO\n\nAndika:\n/setauto 15 Ubutumwa bwawe\n\nKuyihagarika: /stopauto")
@@ -191,6 +211,28 @@ async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for m in update.message.new_chat_members:
         if m.is_bot: continue
         await update.message.reply_text(f"👋 Murakaza neza {m.first_name}! Andika /start@Rwanda_onlinebot ubone menu.")
+
+async def bot_added(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    bot_id = context.bot.id
+    new_members = update.message.new_chat_members
+    bot_just_added = any(m.id == bot_id for m in new_members)
+    if not bot_just_added:
+        return
+    chat = update.effective_chat
+    if chat.type in ["group", "supergroup", "channel"]:
+        groups = load_groups()
+        if chat.id not in groups:
+            groups.append(chat.id); save_groups(groups)
+        try:
+            await context.bot.send_message(
+                chat_id=chat.id,
+                text=f"✅ Nemejwe! Nageze muri {chat.title or 'iyi group'}! 🎉\n\nNdi hano, nshobora kwandika nubwo ntaba Admin (muri group).\n\n📱 Twandikire WhatsApp: 0727172400\nAndika /start ubone menu!"
+            )
+        except Exception as e:
+            print(f"Bot added but cannot send in {chat.id}: {e}")
+            try:
+                await context.bot.send_message(OWNER_ID, f"⚠️ Bot yinjiye muri {chat.title} ({chat.id}) ariko sinashoboye kwandika. Niba ari Channel, nshyiremo Admin.")
+            except: pass
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
@@ -245,13 +287,6 @@ async def auto_sender(app):
         else:
             await asyncio.sleep(30)
 
-async def save_any_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat = update.effective_chat
-    if chat and chat.type in ["group", "supergroup"]:
-        groups = load_groups()
-        if chat.id not in groups:
-            groups.append(chat.id); save_groups(groups)
-
 async def main():
     keep_alive(); load_auto()
     if not TOKEN:
@@ -270,8 +305,8 @@ async def main():
     app.add_handler(CommandHandler("stopauto", stopauto))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, new_group))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, bot_added))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_support))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_any_group))
     print("Bot iriruka...")
     await app.initialize()
     await app.start()
