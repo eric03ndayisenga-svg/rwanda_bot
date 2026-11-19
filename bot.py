@@ -35,7 +35,7 @@ def save_auto():
 # --- MENU NSHYA - PANEL YAWE ---
 def menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwandaonlinebusiness_bot?startgroup=true")],
+    [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
         [InlineKeyboardButton("📜 Rules", callback_data="rules"),
          InlineKeyboardButton("ℹ️ Info", callback_data="info")],
         [InlineKeyboardButton("✍️ Nyandikira / Support", callback_data="support")],
@@ -61,7 +61,7 @@ def owner_panel():
          InlineKeyboardButton("ℹ️ INFO", callback_data="info"),
          InlineKeyboardButton("🆘 HELP", callback_data="help")],
         [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwandaonlinebusiness_bot?startgroup=true")],
-        [InlineKeyboardButton("✍️ NYANDIKIRA / SUPPORT", url="https://t.me/Onlinebu12")],
+    [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
         [InlineKeyboardButton("🛑 HAGARIKA AUTO", callback_data="stopauto_btn")],
     ]), status, auto_min, auto_text
 
