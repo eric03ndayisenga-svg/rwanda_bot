@@ -286,12 +286,14 @@ async def auto_sender(app):
             await asyncio.sleep(float(AUTO_MSG.get("minutes", 15)) * 60)
         else:
             await asyncio.sleep(30)
+async def post_init(app):
+    asyncio.create_task(auto_sender(app))
 
-async def main():
+def main():
     keep_alive(); load_auto()
     if not TOKEN:
         print("BOT_TOKEN ntayibonewe"); return
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status_cmd))
@@ -308,11 +310,9 @@ async def main():
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, bot_added))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_support))
     print("Bot iriruka...")
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    asyncio.create_task(auto_sender(app))
-    await asyncio.Event().wait()
+    app.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
+
+    
