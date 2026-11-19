@@ -5,6 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Messa
 TOKEN = os.getenv("BOT_TOKEN")
 OWNER_ID = 8880467928
 DB_FILE = "groups.json"
+WAITING = set()
 
 def load_groups():
     try:
@@ -29,24 +30,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, reply_markup=menu())
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "COMMANDS:\n/start - Menu\n/rules - Amategeko\n/support - Nyandikira\n/broadcast message - Kohereza muri group zose"
-    await update.message.reply_text(msg)
+    await update.message.reply_text("/start - Menu\n/rules - Amategeko\n/support - Nyandikira\n/broadcast message - Kohereza muri group zose")
 
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana\n4. Kurikiza amabwiriza ya Admin")
+    await update.message.reply_text("AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana")
 
 async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    WAITING.add(update.effective_user.id)
     await update.message.reply_text("Andika ikibazo cyawe hano, nzabwira Admin ako kanya.")
-    context.user_data["waiting_support"] = True
 
 async def forward_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.user_data.get("waiting_support"):
+    uid = update.effective_user.id
+    if uid not in WAITING:
         return
     user = update.effective_user
-    text = "MESSAGE NSHYA\n\nUmuntu: " + str(user.first_name) + "\nUsername: @" + str(user.username) + "\nID: " + str(user.id) + "\n\nMessage: " + str(update.message.text)
+    text = "MESSAGE NSHYA\nUmuntu: " + str(user.first_name) + "\nUsername: @" + str(user.username) + "\nID: " + str(uid) + "\nMessage: " + str(update.message.text)
     await context.bot.send_message(chat_id=OWNER_ID, text=text)
     await update.message.reply_text("Message yawe yoherejwe. Admin azagusubiza vuba.")
-    context.user_data.pop("waiting_support", None)
+    WAITING.remove(uid)
 
 async def reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
@@ -70,8 +71,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif q.data == "info":
         await q.message.reply_text("Rwandaonline business - Bot isanzwe ya group.")
     elif q.data == "support":
+        WAITING.add(q.from_user.id)
         await q.message.reply_text("Andika ikibazo cyawe hano, nzabwira Admin.")
-        context.user_data["waiting_support"] = True
 
 async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
