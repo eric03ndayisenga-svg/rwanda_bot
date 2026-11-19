@@ -1,10 +1,10 @@
 import os, json, asyncio, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = 8880467928
+OWNER_ID = 8880647928
 DB_FILE = "groups.json"
 AUTO_FILE = "auto.json"
 WAITING = set()
@@ -32,10 +32,9 @@ def load_auto():
 def save_auto():
     with open(AUTO_FILE, "w") as f: json.dump(AUTO_MSG, f)
 
-# --- MENU NSHYA - PANEL YAWE ---
 def menu():
     return InlineKeyboardMarkup([
-    [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
+        [InlineKeyboardButton("➕ Add to a Group", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
         [InlineKeyboardButton("📜 Rules", callback_data="rules"),
          InlineKeyboardButton("ℹ️ Info", callback_data="info")],
         [InlineKeyboardButton("✍️ Nyandikira / Support", callback_data="support")],
@@ -52,107 +51,137 @@ def owner_panel():
         [InlineKeyboardButton("▶️ OHEREZA UBU", callback_data="send_now"),
          InlineKeyboardButton("⏰ AUTO 15", callback_data="setauto_help")],
         [InlineKeyboardButton(f"👥 GROUPS: {groups_count}", callback_data="groups"),
-         InlineKeyboardButton("👤 USERS", callback_data="users"),
-         InlineKeyboardButton("📊 STATS", callback_data="stats")],
-        [InlineKeyboardButton("📅 SCHEDULE", callback_data="schedule"),
-         InlineKeyboardButton("💎 PREMIUM", callback_data="premium"),
+         InlineKeyboardButton("👤 USERS", callback_data="users")],
+        [InlineKeyboardButton("📊 STATS", callback_data="stats"),
+         InlineKeyboardButton("📅 SCHEDULE", callback_data="schedule")],
+        [InlineKeyboardButton("💎 PREMIUM", callback_data="premium"),
          InlineKeyboardButton("⚙️ SETTINGS", callback_data="set")],
         [InlineKeyboardButton("📜 RULES", callback_data="rules"),
-         InlineKeyboardButton("ℹ️ INFO", callback_data="info"),
-         InlineKeyboardButton("🆘 HELP", callback_data="help")],
-        [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwandaonlinebusiness_bot?startgroup=true")],
-    [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
+         InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+        [InlineKeyboardButton("🆘 HELP", callback_data="help")],
+        [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
+        [InlineKeyboardButton("✍️ NYANDIKIRA", url="https://t.me/Onlinebu12")],
         [InlineKeyboardButton("🛑 HAGARIKA AUTO", callback_data="stopauto_btn")],
     ]), status, auto_min, auto_text
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id == OWNER_ID:
-        kb, status, auto_min, auto_text = owner_panel()
+    chat = update.effective_chat
+    user = update.effective_user
+    if chat.type in ["group", "supergroup"]:
+        groups = load_groups()
+        if chat.id not in groups:
+            groups.append(chat.id); save_groups(groups)
         await update.message.reply_text(
-            f"🇷🇼 RWANDA BUSINESS PANEL 👑\n"
-            f"👤 G b | @Onlinebu12\n"
-            f"--------------------\n"
-            f"📢 Groups: {len(load_groups())} | Auto: {status}\n"
-            f"⏰ AUTOMATIC MESSAGE: Buri minota {auto_min}\n"
-            f"💬 \"{auto_text}\"\n"
-            f"--------------------\n"
-            f"Hitamo icyo ushaka 👇",
-            reply_markup=kb)
+            f"👋 Murakaza neza {user.first_name}!\n\n🇷🇼 Murakaza neza muri {chat.title}!\n\n💰 Hano dufasha kugurisha, kugura no kumenya promotion!\n\n👇 Hitamo:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
+                [InlineKeyboardButton("💎 PREMIUM", callback_data="premium")],
+                [InlineKeyboardButton("📜 RULES", callback_data="rules"),
+                 InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+                [InlineKeyboardButton("✍️ NYANDIKIRA ADMIN", url="https://t.me/Onlinebu12")],
+            ])
+        )
         return
-    await update.message.reply_text("Murakaza neza kuri Rwanda online business bot wo gucunga amatsinda n'abakiriya bawe.", reply_markup=menu())
+    if user.id == OWNER_ID:
+        kb, status, auto_min, auto_text = owner_panel()
+        msg = f"👑 RWANDA BUSINESS PANEL\n\n👥 Groups: {len(load_groups())} | Auto: {status}\n⏰ AUTOMATIC MESSAGE: Buri minota {auto_min}\n📝 {auto_text}\n\nHitamo icyo ushaka:"
+        await update.message.reply_text(msg, reply_markup=kb)
+        return
+    await update.message.reply_text(
+        f"👋 Murakaza neza {user.first_name}!\n\n🇷🇼 Murakaza neza kuri RWANDA BUSINESS!\n\n👇 Hitamo:",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ ADD TO GROUP", url="https://t.me/Rwanda_onlinebot?startgroup=true")],
+            [InlineKeyboardButton("💎 PREMIUM", callback_data="premium")],
+            [InlineKeyboardButton("📜 RULES", callback_data="rules"),
+             InlineKeyboardButton("ℹ️ INFO", callback_data="info")],
+            [InlineKeyboardButton("✍️ NYANDIKIRA ADMIN", url="https://t.me/Onlinebu12")],
+        ])
+    )
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("COMMANDS:\n/start - Gutangira\n/rules - Amategeko\n/support - Kuvugana na Admin\n/broadcast ubutumwa - Kohereza muri group zose\n/announce ubutumwa - Itangazo\n/send ID ubutumwa - Kohereza ku muntu\n/setauto 15 Ubutumwa - Gushyiraho Auto buri minota 15\n/stopauto - Hagarira Automatic\n/status - Reba uko bot ihagaze", reply_markup=menu())
+    await update.message.reply_text("COMMANDS: /start - Gutangira\n/rules - Amategeko\n/support - Ubufasha", reply_markup=menu())
 
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
-    auto_txt = f"ON - Buri minota {AUTO_MSG.get('minutes')}" if AUTO_MSG.get("on") else "OFF"
-    await update.message.reply_text(f"📊 BOT STATUS\nGroups: {len(load_groups())}\nAutomatic: {auto_txt}\nMessage: {AUTO_MSG.get('text')}")
+    auto_text = f"ON - Buri minota {AUTO_MSG.get('minutes')}" if AUTO_MSG.get("on") else "OFF"
+    await update.message.reply_text(f"📊 STATUS\nGroups: {len(load_groups())}\nAuto: {auto_text}\nGroups: {load_groups()}")
 
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana", reply_markup=menu())
+    await update.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta scam.")
 
 async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✍️ Andika ikibazo cyawe hano, nzagusubiza.")
     WAITING.add(update.effective_user.id)
-    await update.message.reply_text("Andika ikibazo cyawe hano, nzabisubiza vuba.")
 
 async def forward_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private": return
-    if update.effective_user.id not in WAITING: return
     user = update.effective_user
-    await context.bot.send_message(chat_id=OWNER_ID, text=f"💬 MESSAGE NSHYA\nKuva: {user.first_name} (@{user.username})\nID: {user.id}\nUbutumwa: {update.message.text}")
-    await update.message.reply_text("Message yawe yoherejwe. Admin azagusubiza vuba ✅")
-    WAITING.remove(update.effective_user.id)
+    if user.id in WAITING:
+        WAITING.remove(user.id)
+        await context.bot.send_message(OWNER_ID, f"📩 MESSAGE NSHYA\n👤 {user.first_name} (ID: {user.id})\n\n{update.message.text}")
+        await update.message.reply_text("✅ Message yawe yoherejwe. Admin aragusubiza.")
 
 async def reply_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
     if len(context.args) < 2:
-        await update.message.reply_text("Andika: /reply ID Message"); return
+        await update.message.reply_text("Andika: /reply ID Ubutumwa"); return
     try:
-        await context.bot.send_message(chat_id=int(context.args[0]), text=f"💬 Admin: {' '.join(context.args[1:])}")
-        await update.message.reply_text("Byoherejwe ✅")
-    except: await update.message.reply_text("Ntibashije kohereza.")
+        await context.bot.send_message(chat_id=int(context.args[0]), text=" ".join(context.args[1:]))
+        await update.message.reply_text("✅ Byoherejwe")
+    except: await update.message.reply_text("❌ Ntibishoboye koherezwa.")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    if q.data == "rules":
-        await q.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta gutukana", reply_markup=menu())
-    elif q.data == "info":
-        await q.message.reply_text("ℹ️ Rwanda online business - Bot izafasha na Rwanda online business kugurisha ifashe gucunga amatsinda n'abakiriya.", reply_markup=menu())
-    elif q.data == "support":
-        WAITING.add(q.from_user.id)
-        await q.message.reply_text("Andika ikibazo cyawe hano, nzabisubiza vuba.")
-    elif q.data == "broadcast":
-        await q.message.reply_text("Andika: /broadcast Ubutumwa bwawe")
-    elif q.data == "send_now":
+    data = q.data
+    user = q.from_user
+    if data == "rules":
+        await q.message.reply_text("📜 AMATEGEKO:\n1. Nta spam\n2. Kubaha abandi\n3. Nta scam - uzabuzwa burundu.")
+        return
+    if data == "info":
+        await q.message.reply_text("🇷🇼 RWANDA BUSINESS\n\nBot izafasha kugurisha, kugura no kumenya promotion!\n\nNyandikira: @Onlinebu12")
+        return
+    if data == "premium":
+        await q.message.reply_text("💎 PREMIUM\n\nUshaka Premium? Nyandikira:\n👉 @Onlinebu12")
+        return
+    if data == "support":
+        WAITING.add(user.id)
+        await q.message.reply_text("✍️ Andika ikibazo cyawe hano, admin aragusubiza.")
+        return
+    if data == "help":
+        await q.message.reply_text("🆘 HELP\n\n/start - Panel\n/rules - Amategeko\n/support - Ubufasha\n\nMuri group andika: /start@Rwanda_onlinebot")
+        return
+    if user.id != OWNER_ID:
+        await q.message.reply_text("❌ Iyi button ni iya Admin gusa.")
+        return
+    if data == "broadcast":
+        await q.message.reply_text("📢 OHEREZA HOSE\n\nAndika:\n/broadcast Ubutumwa bwawe")
+    elif data == "send_now":
         if not AUTO_MSG.get("text"):
-            await q.message.reply_text("Nta message washyizeho. Andika:\n/setauto 15 Ubutumwa bwawe")
+            await q.message.reply_text("❌ Nta message washyizeho.\nAndika:\n/setauto 15 Ubutumwa bwawe")
         else:
             c = 0
             for gid in load_groups():
-                try: await context.bot.send_message(chat_id=gid, text=f"{AUTO_MSG['text']}\n\n— G b @Onlinebu12"); c+=1
+                try: await context.bot.send_message(chat_id=gid, text=f"📢 {AUTO_MSG['text']}"); c+=1
                 except: pass
-            await q.message.reply_text(f"✅ AUTOMATIC YOHEREJWE UBU!\nYageze muri Groups: {c}")
-    elif q.data == "setauto_help":
-        await q.message.reply_text("Andika:\n/setauto 15 Ubutumwa bwawe hano")
-    elif q.data == "stopauto_btn":
+            await q.message.reply_text(f"✅ OHEREJE UBU muri group {c} ✅")
+    elif data == "setauto_help":
+        await q.message.reply_text("⏰ AUTO\n\nAndika:\n/setauto 15 Ubutumwa bwawe\n\nKuyihagarika: /stopauto")
+    elif data == "stopauto_btn":
         AUTO_MSG["on"] = False; save_auto()
         await q.message.reply_text("🛑 Automatic yahagaritswe.")
-    elif q.data == "groups":
-        await q.message.reply_text(f"👥 Ufite Groups: {len(load_groups())}")
-    elif q.data == "users":
-        await q.message.reply_text("👤 USERS - Abakoresha bageze kuri bot")
-    elif q.data == "stats":
-        await q.message.reply_text(f"📊 STATS\nGroups: {len(load_groups())}\nAuto: {'ON 🟢' if AUTO_MSG.get('on') else 'OFF 🔴'}\nBuri: {AUTO_MSG.get('minutes')} min\nMessage: {AUTO_MSG.get('text')}")
-    elif q.data == "schedule":
-        await q.message.reply_text("📅 SCHEDULE\n/setauto 15 Message - Buri 15 min\n/setauto 30 Message - Buri 30 min\n/setauto 60 Message - Buri saha")
-    elif q.data == "premium":
-        await q.message.reply_text("💎 PREMIUM\nNyandikira: @Onlinebu12")
-    elif q.data == "set":
-        await q.message.reply_text("⚙️ SETTINGS\n/setauto 15 Message\n/stopauto\n/status")
-    elif q.data == "help":
-        await q.message.reply_text("🆘 HELP\n/start - Panel\n/setauto 15 Message - Auto\n/broadcast Message - Hose\n/stopauto - Guhagarika")
+    elif data == "groups":
+        await q.message.reply_text(f"👥 Ufite Groups: {len(load_groups())}\n\n{load_groups()}")
+    elif data == "users":
+        await q.message.reply_text("👤 USERS\n\nAbakoresha bageze kuri bot.")
+    elif data == "stats":
+        await q.message.reply_text(f"📊 STATS\n\n👥 Groups: {len(load_groups())}\n⚡ Auto: {'ON 🟢' if AUTO_MSG.get('on') else 'OFF 🔴'}\n⏰ Minota: {AUTO_MSG.get('minutes')}\n📝 Message: {AUTO_MSG.get('text')[:50]}")
+    elif data == "schedule":
+        await q.message.reply_text("📅 SCHEDULE\n\n/setauto 15 Ubutumwa bwawe")
+    elif data == "set":
+        await q.message.reply_text("⚙️ SETTINGS\n\n/setauto 15 Message - Auto\n/stopauto - Hagarika\n/status - Status\n/broadcast Message - Ohereza Hose")
+    else:
+        await q.message.reply_text("✅ Birakora!")
 
 async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -160,10 +189,8 @@ async def new_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat.id not in groups:
         groups.append(chat.id); save_groups(groups)
     for m in update.message.new_chat_members:
-        if m.id == context.bot.id:
-            await update.message.reply_text("Murakaza neza! Ndi Rwanda online business bot. Soma /rules")
-    else:
-        await update.message.reply_text(f"Murakaza neza {update.message.new_chat_members[0].first_name}!")
+        if m.is_bot: continue
+        await update.message.reply_text(f"👋 Murakaza neza {m.first_name}! Andika /start@Rwanda_onlinebot ubone menu.")
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
@@ -171,9 +198,9 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Andika: /broadcast Murakaza neza"); return
     text = " ".join(context.args); sent = 0
     for gid in load_groups():
-        try: await context.bot.send_message(chat_id=gid, text=text); sent += 1
+        try: await context.bot.send_message(chat_id=gid, text=text); sent+=1
         except: pass
-    await update.message.reply_text(f"Byoherejwe muri group {sent} ✅")
+    await update.message.reply_text(f"✅ Byoherejwe muri group {sent} ✅")
 
 async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
@@ -181,52 +208,54 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Andika: /announce Murakaza neza"); return
     text = " ".join(context.args); sent = 0
     for gid in load_groups():
-        try: await context.bot.send_message(chat_id=gid, text=f"📢 ITANGAZO\n\n{text}"); sent += 1
+        try: await context.bot.send_message(chat_id=gid, text=f"📢 ITANGAZO\n\n{text}"); sent+=1
         except: pass
-    await update.message.reply_text(f"Byoherejwe muri group {sent} ✅")
+    await update.message.reply_text(f"✅ Byoherejwe muri group {sent} ✅")
 
 async def send_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
     if len(context.args) < 2:
         await update.message.reply_text("Koresha: /send ID ubutumwa"); return
     try:
-        await context.bot.send_message(chat_id=int(context.args[0]), text=f"{' '.join(context.args[1:])}")
-        await update.message.reply_text("Byoherejwe ✅")
-    except: await update.message.reply_text("Ntibashije kohereza.")
+        await context.bot.send_message(chat_id=int(context.args[0]), text=" ".join(context.args[1:]))
+        await update.message.reply_text("✅ Byoherejwe")
+    except: await update.message.reply_text("❌ Ntibishoboye kohereza.")
 
 async def setauto(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
     if len(context.args) < 2:
-        await update.message.reply_text("Koresha: /setauto 15 Murakaza neza - buri minota 15\n/setauto 30 Promotion - buri minota 30"); return
+        await update.message.reply_text("Koresha: /setauto 15 Murakaza neza"); return
     try: minutes = float(context.args[0])
-    except: await update.message.reply_text("Andika umubare w'iminota. Urugero: /setauto 15 Murakaza neza"); return
-    if minutes < 1:
-        await update.message.reply_text("Iminota igomba kuba 1 kuzamura."); return
+    except: await update.message.reply_text("Andika umubare w'iminota. Urugero: /setauto 15 ..."); return
     AUTO_MSG.update({"text": " ".join(context.args[1:]), "minutes": minutes, "on": True})
     save_auto()
-    await update.message.reply_text(f"✅ AUTOMATIC YEMEJWE!\nBuri minota {minutes}, nzohereza:\n\"{AUTO_MSG['text']}\"")
+    await update.message.reply_text(f"✅ AUTOMATIC YEMEJWE! Buri minota {minutes} izajya yohereza:\n{AUTO_MSG['text']}")
 
 async def stopauto(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != OWNER_ID: return
     AUTO_MSG["on"] = False; save_auto()
     await update.message.reply_text("🛑 Automatic yahagaritswe.")
 
 async def auto_sender(app):
-    await asyncio.sleep(10)
     while True:
         if AUTO_MSG.get("on") and AUTO_MSG.get("text"):
             for gid in load_groups():
-                try: await app.bot.send_message(chat_id=gid, text=f"{AUTO_MSG['text']}\n\n— G b @Onlinebu12")
+                try: await app.bot.send_message(chat_id=gid, text=f"📢 {AUTO_MSG['text']}")
                 except: pass
             await asyncio.sleep(float(AUTO_MSG.get("minutes", 15)) * 60)
         else:
             await asyncio.sleep(30)
 
+async def save_any_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if chat and chat.type in ["group", "supergroup"]:
+        groups = load_groups()
+        if chat.id not in groups:
+            groups.append(chat.id); save_groups(groups)
+
 async def main():
-    keep_alive()
-    load_auto()
+    keep_alive(); load_auto()
     if not TOKEN:
-        print("BOT_TOKEN ntayobowe irira"); return
+        print("BOT_TOKEN ntayibonewe"); return
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
@@ -242,6 +271,7 @@ async def main():
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, new_group))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_support))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_any_group))
     print("Bot iriruka...")
     await app.initialize()
     await app.start()
